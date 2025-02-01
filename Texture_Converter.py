@@ -32,18 +32,18 @@ def convert_co_texture(base_color_path, metal_path, output_path, use_specular_co
         if use_specular_conversion and metal_path:
             metal_map = Image.open(metal_path).convert("L")
 
-            # NumPy Arrays für die Berechnung
+           # Numpy arrays for the calculation
             base_color_np = np.array(base_color, dtype=np.float32) / 255.0
             metal_map_np = np.array(metal_map, dtype=np.float32) / 255.0
 
-            # Spekularfarbe berechnen
+            # Calculate specula color
             specular_color_np = base_color_np * metal_map_np[..., None] + (1 - metal_map_np[..., None]) * 0.04
             specular_factor_np = np.max(specular_color_np, axis=2, keepdims=True)
 
-            # Diffuse-Farbe berechnen
+            #Calculate diffuse paint
             diffuse_color_np = base_color_np * (1 - specular_factor_np)
 
-            # Skaliere auf 0-255 zurück und speichere
+            # Scali back to 0-255 and save
             diffuse_color_img = Image.fromarray((diffuse_color_np * 255).astype(np.uint8))
             diffuse_color_img.save(output_path, format="TGA")
             print(f"_co successfully saved with Specular correction under {output_path}")
@@ -61,24 +61,24 @@ def convert_co_texture(base_color_path, metal_path, output_path, use_specular_co
 # convert _as texture
 def convert_as_texture(ao_path, output_path):
     try:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)  # Sicherstellen, dass der Ordner existiert
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        # AO-Textur laden und in Graustufen umwandeln
+        # Load AO-Textur and convert into grayscale
         ao = Image.open(ao_path).convert("L")
 
-        # Erste Invertierung der AO-Map (255 - Wert)
+        # First inversion of the AO -Map (255 - value)e)
         inverted_ao = Image.eval(ao, lambda x: 255 - x)
 
-        # Schwarze Kanäle für R & B (0)
+        # Black channels for R&B (0)
         black_channel = Image.new("L", ao.size, 0)
 
-        # Kombinieren zu einer RGB-Textur (_as) mit (R=0, G=invertierte AO, B=0)
+        # Combine to an RGB texture (_AS) with (r = 0, g = inverted AO, B = 0)
         as_texture = Image.merge("RGB", (black_channel, inverted_ao, black_channel))
 
-        # Zweite Invertierung der gesamten _as-Textur
+        # Second inversion of the entire _AS texture
         final_as_texture = Image.eval(as_texture, lambda x: 255 - x)
 
-        # Speichern als .tga
+        # Save as .tga
         final_as_texture.save(output_path, format="TGA")
         print(f"_as successfully saved under {output_path}")
         return output_path
@@ -123,15 +123,15 @@ def convert_smdi_texture(metal_path, roughness_path, output_path, specular_facto
         metallic_image = Image.open(metal_path).convert("L")
         roughness_image = Image.open(roughness_path).convert("L")
         
-        # Specular aus Metallic berechnen und mit Specular-Faktor justieren
+        #Calculate the specular from metallic and adjust it with Specular factor
         specular_image = Image.eval(metallic_image, lambda x: int(metallic_to_specular(x / 255.0, [1.0, 1.0, 1.0], specular_factor)[1]))
         
-        # Glossiness berechnen und mit Glossiness-Faktor justieren
+        # Calculate glossiness and adjust with glossiness factor
         glossiness_image = Image.eval(roughness_image, lambda x: int((255 - x) * glossiness_factor))
         
-        red_channel = Image.new("L", metallic_image.size, 255)  # Komplett weiß
-        green_channel = specular_image  # Specular-Wert
-        blue_channel = glossiness_image  # Glossiness-Wert
+        red_channel = Image.new("L", metallic_image.size, 255)  # Completely white
+        green_channel = specular_image  # Specular value
+        blue_channel = glossiness_image  # Glossiness
         
         smdi_map = Image.merge("RGB", (red_channel, green_channel, blue_channel))
         smdi_map.save(output_path, format="TGA")
@@ -176,7 +176,7 @@ def start_conversion():
         metal_path = metal_entry.get()
         co_output = os.path.join(output_folder, f"{prefix}_co.tga")
 
-        # Modus aus der Button-Auswahl abrufen
+        # Call mode from the button selection
         use_specular = (co_conversion_mode.get() == "base_color_specular")
 
         if base_color_path:
@@ -187,7 +187,7 @@ def start_conversion():
     except Exception as e:
         print(f"Error in _co conversion: {e}")
 
-    # ✅ JETZT FOLGEN DIE ANDEREN KONVERTIERUNGEN IN SEPARATEN TRY-BLOCKS
+    # ✅ Now the other conversions in separate try blocks follow
 
     try:
         ao_path = ao_entry.get()
@@ -258,7 +258,7 @@ def update_preview(label, file_path):
         img.thumbnail((130, 130))
         img_tk = ImageTk.PhotoImage(img)
         label.configure(image=img_tk, width=130, height=130)
-        label.image = img_tk  # Wichtig: Referenz speichern
+        label.image = img_tk  # Important: Save the reference
         label.bind("<Button-1>", lambda e: show_large_preview(file_path))
     except Exception as e:
         print(f"Fehler beim Laden der Vorschau: {e}")
@@ -412,15 +412,14 @@ as_result_label.grid(row=0, column=5, padx=10)
 # Set default active button
 set_normal_map_type("directx")
 
-# StringVar für Moduswahl erstellen (muss nach `root = tk.Tk()` erfolgen)
 co_conversion_mode = tk.StringVar(value="base_color")  # Standard: Base Color Only
 
-# Funktion zur Auswahl des Conversion-Modus
+# Function to select the conversion mode
 def set_co_conversion_mode(mode):
     global co_conversion_mode
     co_conversion_mode.set(mode)
 
-    # Button-Stile aktualisieren
+    # Update button styles
     if mode == "base_color":
         base_color_convert_button.configure(relief=tk.SUNKEN, bg="lightblue")
         base_color_specular_button.configure(relief=tk.RAISED, bg="SystemButtonFace")
@@ -428,7 +427,6 @@ def set_co_conversion_mode(mode):
         base_color_specular_button.configure(relief=tk.SUNKEN, bg="lightblue")
         base_color_convert_button.configure(relief=tk.RAISED, bg="SystemButtonFace")
 
-# Erst jetzt die Funktion aufrufen (nach ihrer Definition!)
 set_co_conversion_mode("base_color")
 
 
