@@ -1,1 +1,1 @@
-# rwg_texture_converter
+# RwG Texture Converter
