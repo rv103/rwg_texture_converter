@@ -282,7 +282,7 @@ def set_normal_map_type(type):
 # Create the GUI
 root  = tk.Tk()
 root .title("Texture Converter 0.85b")
-root .geometry("750x750")
+root .geometry("750x800")
 
 
   
@@ -384,28 +384,44 @@ result_frame = tk.Frame(root)
 result_frame.pack(pady=20)
 
 base_color_result_label = tk.Label(result_frame, text="_co Result", activebackground="red", width=18, height=9, bg="gray")
-base_color_result_label.grid(row=0, column=0, padx=10)
+base_color_result_label.grid(row=1, column=0, padx=10)
 
 normal_result_label = tk.Label(result_frame, text="_nohq Result", width=18, height=9, bg="gray")
-normal_result_label.grid(row=0, column=1, padx=10)
+normal_result_label.grid(row=1, column=1, padx=10)
 
 specular_scale = tk.Scale(result_frame, length=143, activebackground="red", from_=2.0, to=0, showvalue=1, resolution=0.05, orient=tk.VERTICAL)
 specular_scale.set(0.75)
-specular_scale.grid(row=0, column=2, padx=10)
+specular_scale.grid(row=1, column=2, padx=10)
 
 glossiness_scale = tk.Scale(result_frame, length=143, activebackground="red",  showvalue=1, from_=2.0, to=0.0, resolution=0.05, orient=tk.VERTICAL)
 glossiness_scale.set(1.0)
-glossiness_scale.grid(row=0, column=3, padx=0)
+glossiness_scale.grid(row=1, column=3, padx=0)
 
 smdi_result_label = tk.Label(result_frame, text="_smdi Result", width=18, height=9, bg="gray")
-smdi_result_label.grid(row=0, column=4, padx=10)
+smdi_result_label.grid(row=1, column=4, padx=10)
 
 
 
 as_result_label = tk.Label(result_frame, text="_as Result", width=18, height=9, bg="gray")
-as_result_label.grid(row=0, column=5, padx=10)
+as_result_label.grid(row=1, column=5, padx=10)
 
+co_label = tk.Label(result_frame, text="_co", bg="gray")
+co_label.grid(row=0, column=0, padx=10)
 
+nohq_label = tk.Label(result_frame, text="_nohq", bg="gray")
+nohq_label.grid(row=0, column=1, padx=10)
+
+spec_label = tk.Label(result_frame, width=5, text="Spec", bg="gray")
+spec_label.grid(row=0, column=2, padx=10)
+
+gloss_label = tk.Label(result_frame, width=5, text="Gloss", bg="gray")
+gloss_label.grid(row=0, column=3, padx=10)
+
+smdi_label = tk.Label(result_frame, text="_smdi", bg="gray")
+smdi_label.grid(row=0, column=4, padx=10)
+
+as_label = tk.Label(result_frame, text="_as", bg="gray")
+as_label.grid(row=0, column=5, padx=10)
 
 
 
