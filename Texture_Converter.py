@@ -11,12 +11,12 @@ from tkinter import *
 normal_map_type = "directx"
 
 
-
+# _co Mode
 def set_co_conversion_mode(mode):
     global co_conversion_mode
     co_conversion_mode.set(mode)
     
-    # Button-Stile aktualisieren
+    # Refresh Button-Stile
     if mode == "base_color":
         base_color_button.configure(relief=tk.SUNKEN, bg="lightblue")
         base_color_specular_button.configure(relief=tk.RAISED, bg="SystemButtonFace")
@@ -24,9 +24,7 @@ def set_co_conversion_mode(mode):
         base_color_specular_button.configure(relief=tk.SUNKEN, bg="lightblue")
         base_color_button.configure(relief=tk.RAISED, bg="SystemButtonFace")
 
-# Standardmodus setzen
-
-
+# convert _co texture
 def convert_co_texture(base_color_path, metal_path, output_path, use_specular_conversion=False):
     try:
         base_color = Image.open(base_color_path).convert("RGB")
@@ -60,6 +58,7 @@ def convert_co_texture(base_color_path, metal_path, output_path, use_specular_co
         print(f"Error when creating the _co texture: {e}")
         return None
 
+# convert _as texture
 def convert_as_texture(ao_path, output_path):
     try:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)  # Sicherstellen, dass der Ordner existiert
@@ -87,11 +86,7 @@ def convert_as_texture(ao_path, output_path):
         print(f"Error when creating the _as texture: {e}")
         return None
 
-
-
-
-
-
+# convert _nohq texture
 def convert_nohq_texture(normal_path, output_path, normal_map_type):
     try:
         # Open Normal Map image
@@ -112,14 +107,14 @@ def convert_nohq_texture(normal_path, output_path, normal_map_type):
         print(f"Error when creating the _nohq texture: {e}")
         return None
 
-
+# metallic to specular
 def metallic_to_specular(metallic, base_color, specular_factor):
     """
     Berechnet die Specular-Farbe aus Metallic und Base Color mit einstellbarem Specular-Faktor.
     """
     return [min(255, max(0, int((base_color[i] * metallic + (1 - metallic) * 0.04) * specular_factor * 255))) for i in range(3)]
 
-
+# convert _smdi texture
 def convert_smdi_texture(metal_path, roughness_path, output_path, specular_factor=0.75, glossiness_factor=1.0):
     try:
         if not (metal_path and roughness_path):
@@ -149,7 +144,7 @@ def convert_smdi_texture(metal_path, roughness_path, output_path, specular_facto
 
 
 
-
+# Show large preview
 def show_large_preview(file_path):
     try:
         preview_window = tk.Toplevel(root)
@@ -166,7 +161,7 @@ def show_large_preview(file_path):
     except Exception as e:
         print(f"Error showing large preview: {e}")
 
-
+# Start conversion
 def start_conversion():
     global active_button
     output_folder = output_entry.get()
@@ -226,17 +221,7 @@ def start_conversion():
 
     print("✅ Conversion process completed!")
 
-
-
-
-
-
-
-
-
-
-
-
+# Select file
 def select_file(entry, preview_label):
     file_path = filedialog.askopenfilename(title="Select File", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.tga")])
     if file_path:
@@ -260,11 +245,13 @@ def select_file(entry, preview_label):
             print(f"Error loading image: {e}")
             preview_label.configure(image=None, width=130, height=130, text="Error")
 
+# Select output folder
 def select_output_folder():
     folder_selected = filedialog.askdirectory()
     output_entry.delete(0, tk.END)
     output_entry.insert(0, folder_selected)
 
+# Update preview
 def update_preview(label, file_path):
     try:
         img = Image.open(file_path)
