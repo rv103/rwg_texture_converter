@@ -1,10 +1,10 @@
 
-#import os
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import *
-#from PIL import Image, ImageTk
-#import numpy as np
+from PIL import Image, ImageTk
+import numpy as np
 
 
 # Variable to track the imported normal map type
