@@ -25,30 +25,31 @@ def set_co_conversion_mode(mode):
         base_color_button.configure(relief=tk.RAISED, bg="SystemButtonFace")
 
 # convert _co texture
-def convert_co_texture(base_color_path, metal_path, output_path, use_specular_conversion=False):
+def convert_co_texture(base_color_path, metal_path, output_path, use_specular_conversion=False, resolution=1024):
     try:
         base_color = Image.open(base_color_path).convert("RGB")
-
         if use_specular_conversion and metal_path:
             metal_map = Image.open(metal_path).convert("L")
-
-           # Numpy arrays for the calculation
+            # Numpy arrays for the calculation
             base_color_np = np.array(base_color, dtype=np.float32) / 255.0
             metal_map_np = np.array(metal_map, dtype=np.float32) / 255.0
 
-            # Calculate specula color
+            # Calculate specular color
             specular_color_np = base_color_np * metal_map_np[..., None] + (1 - metal_map_np[..., None]) * 0.04
             specular_factor_np = np.max(specular_color_np, axis=2, keepdims=True)
 
-            #Calculate diffuse paint
+            # Calculate diffuse paint
             diffuse_color_np = base_color_np * (1 - specular_factor_np)
 
-            # Scali back to 0-255 and save
+            # Scale back to 0-255 and convert to image
             diffuse_color_img = Image.fromarray((diffuse_color_np * 255).astype(np.uint8))
+            # Resize auf die gewählte Auflösung
+            diffuse_color_img = diffuse_color_img.resize((resolution, resolution), Image.LANCZOS)
             diffuse_color_img.save(output_path, format="TGA")
             print(f"_co successfully saved with Specular correction under {output_path}")
-
         else:
+            # Resize base color image before saving
+            base_color = base_color.resize((resolution, resolution), Image.LANCZOS)
             base_color.save(output_path, format="TGA")
             print(f"_co successfully saved as Base Color only under {output_path}")
 
@@ -59,26 +60,21 @@ def convert_co_texture(base_color_path, metal_path, output_path, use_specular_co
         return None
 
 # convert _as texture
-def convert_as_texture(ao_path, output_path):
+def convert_as_texture(ao_path, output_path, resolution=1024):
     try:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-        # Load AO-Textur and convert into grayscale
+        # Load AO texture and convert into grayscale
         ao = Image.open(ao_path).convert("L")
-
-        # First inversion of the AO -Map (255 - value)e)
+        # First inversion of the AO map (255 - value)
         inverted_ao = Image.eval(ao, lambda x: 255 - x)
-
-        # Black channels for R&B (0)
+        # Black channels for R & B (0)
         black_channel = Image.new("L", ao.size, 0)
-
-        # Combine to an RGB texture (_AS) with (r = 0, g = inverted AO, B = 0)
+        # Combine to an RGB texture (_AS) with (R = 0, G = inverted AO, B = 0)
         as_texture = Image.merge("RGB", (black_channel, inverted_ao, black_channel))
-
         # Second inversion of the entire _AS texture
         final_as_texture = Image.eval(as_texture, lambda x: 255 - x)
-
-        # Save as .tga
+        # Resize auf die gewählte Auflösung
+        final_as_texture = final_as_texture.resize((resolution, resolution), Image.LANCZOS)
         final_as_texture.save(output_path, format="TGA")
         print(f"_as successfully saved under {output_path}")
         return output_path
@@ -87,19 +83,18 @@ def convert_as_texture(ao_path, output_path):
         return None
 
 # convert _nohq texture
-def convert_nohq_texture(normal_path, output_path, normal_map_type):
+def convert_nohq_texture(normal_path, output_path, normal_map_type, resolution=1024):
     try:
         # Open Normal Map image
         normal_map = Image.open(normal_path).convert("RGB")
-
         # Adjust for DirectX or OpenGL
         if normal_map_type == "directx":
             # DirectX flips the green channel
             r, g, b = normal_map.split()
             g = Image.eval(g, lambda x: 255 - x)
             normal_map = Image.merge("RGB", (r, g, b))
-
-        # Save as _nohq texture
+        # Resize auf die gewählte Auflösung
+        normal_map = normal_map.resize((resolution, resolution), Image.LANCZOS)
         normal_map.save(output_path, format="TGA")
         print(f"_nohq successfully saved under {output_path}")
         return output_path
@@ -115,7 +110,7 @@ def metallic_to_specular(metallic, base_color, specular_factor):
     return [min(255, max(0, int((base_color[i] * metallic + (1 - metallic) * 0.04) * specular_factor * 255))) for i in range(3)]
 
 # convert _smdi texture
-def convert_smdi_texture(metal_path, roughness_path, output_path, specular_factor=0.75, glossiness_factor=1.0):
+def convert_smdi_texture(metal_path, roughness_path, output_path, specular_factor=0.75, glossiness_factor=1.0, resolution=1024):
     try:
         if not (metal_path and roughness_path):
             raise ValueError("Metallic- oder Roughness-Dateipfad fehlt.")
@@ -123,9 +118,8 @@ def convert_smdi_texture(metal_path, roughness_path, output_path, specular_facto
         metallic_image = Image.open(metal_path).convert("L")
         roughness_image = Image.open(roughness_path).convert("L")
         
-        #Calculate the specular from metallic and adjust it with Specular factor
+        # Calculate the specular from metallic and adjust it with Specular factor
         specular_image = Image.eval(metallic_image, lambda x: int(metallic_to_specular(x / 255.0, [1.0, 1.0, 1.0], specular_factor)[1]))
-        
         # Calculate glossiness and adjust with glossiness factor
         glossiness_image = Image.eval(roughness_image, lambda x: int((255 - x) * glossiness_factor))
         
@@ -134,8 +128,9 @@ def convert_smdi_texture(metal_path, roughness_path, output_path, specular_facto
         blue_channel = glossiness_image  # Glossiness
         
         smdi_map = Image.merge("RGB", (red_channel, green_channel, blue_channel))
+        # Resize auf die gewählte Auflösung
+        smdi_map = smdi_map.resize((resolution, resolution), Image.LANCZOS)
         smdi_map.save(output_path, format="TGA")
-        
         print(f"_smdi successfully saved under {output_path}")
         return output_path
     except Exception as e:
@@ -150,20 +145,16 @@ def show_large_preview(file_path):
         preview_window = tk.Toplevel(root)
         preview_window.title("Preview")
         preview_window.geometry("1024x1024")
-
         img = Image.open(file_path)
-        img = img.resize((1024, 1024))  # Resize to 1024x1024
+        img = img.resize((1024, 1024), Image.LANCZOS)  # Resize to 1024x1024
         img_tk = ImageTk.PhotoImage(img)
-
         label = tk.Label(preview_window, image=img_tk)
         label.image = img_tk  # Keep a reference to avoid garbage collection
         label.pack(expand=True, fill=tk.BOTH)
     except Exception as e:
         print(f"Error showing large preview: {e}")
 
-# Start conversion
 def start_conversion():
-    global active_button
     output_folder = output_entry.get()
     prefix = prefix_entry.get()
 
@@ -171,29 +162,30 @@ def start_conversion():
         messagebox.showerror("Error", "Output folder must be selected.")
         return
 
+    # Lese die gewählten Auflösungen aus den Dropdowns
+    co_res = int(co_resolution_var.get())
+    as_res = int(as_resolution_var.get())
+    normal_res = int(nohq_resolution_var.get())
+    smdi_res = int(smdi_resolution_var.get())
+
     try:
         base_color_path = base_color_entry.get()
         metal_path = metal_entry.get()
         co_output = os.path.join(output_folder, f"{prefix}_co.tga")
-
-        # Call mode from the button selection
         use_specular = (co_conversion_mode.get() == "base_color_specular")
-
         if base_color_path:
-            convert_co_texture(base_color_path, metal_path, co_output, use_specular)
+            convert_co_texture(base_color_path, metal_path, co_output, use_specular, resolution=co_res)
             update_preview(base_color_result_label, co_output)
         else:
             print("Error: Base Color fehlt für _co Konvertierung")
     except Exception as e:
         print(f"Error in _co conversion: {e}")
 
-    # ✅ Now the other conversions in separate try blocks follow
-
     try:
         ao_path = ao_entry.get()
         as_output = os.path.join(output_folder, f"{prefix}_as.tga")
         if ao_path:
-            convert_as_texture(ao_path, as_output)
+            convert_as_texture(ao_path, as_output, resolution=as_res)
             update_preview(as_result_label, as_output)
     except Exception as e:
         print(f"Error in _as conversion: {e}")
@@ -202,7 +194,7 @@ def start_conversion():
         normal_path = normal_entry.get()
         nohq_output = os.path.join(output_folder, f"{prefix}_nohq.tga")
         if normal_path:
-            convert_nohq_texture(normal_path, nohq_output, normal_map_type)
+            convert_nohq_texture(normal_path, nohq_output, normal_map_type, resolution=normal_res)
             update_preview(normal_result_label, nohq_output)
     except Exception as e:
         print(f"Error in _nohq conversion: {e}")
@@ -212,9 +204,8 @@ def start_conversion():
         smdi_output = os.path.join(output_folder, f"{prefix}_smdi.tga")
         specular_factor = specular_scale.get()
         glossiness_factor = glossiness_scale.get()
-        
         if metal_path and roughness_path:
-            convert_smdi_texture(metal_path, roughness_path, smdi_output, specular_factor, glossiness_factor)
+            convert_smdi_texture(metal_path, roughness_path, smdi_output, specular_factor, glossiness_factor, resolution=smdi_res)
             update_preview(smdi_result_label, smdi_output)
     except Exception as e:
         print(f"Error in _smdi conversion: {e}")
@@ -227,20 +218,14 @@ def select_file(entry, preview_label):
     if file_path:
         entry.delete(0, tk.END)
         entry.insert(0, file_path)
-
         try:
-            # Load the image and ensure it is in a compatible mode
             img = Image.open(file_path)
             if img.mode not in ("RGB", "RGBA"):
                 img = img.convert("RGB")
-            
-            # Resize for smaller preview
             img.thumbnail((130, 130))
             img_tk = ImageTk.PhotoImage(img)
-
-            # Update the preview label
             preview_label.configure(image=img_tk, width=130, height=130)
-            preview_label.image = img_tk  # Keep a reference to avoid garbage collection
+            preview_label.image = img_tk  # Save reference
         except Exception as e:
             print(f"Error loading image: {e}")
             preview_label.configure(image=None, width=130, height=130, text="Error")
@@ -258,19 +243,23 @@ def update_preview(label, file_path):
         img.thumbnail((130, 130))
         img_tk = ImageTk.PhotoImage(img)
         label.configure(image=img_tk, width=130, height=130)
-        label.image = img_tk  # Important: Save the reference
+        label.image = img_tk  # Save reference
         label.bind("<Button-1>", lambda e: show_large_preview(file_path))
     except Exception as e:
         print(f"Fehler beim Laden der Vorschau: {e}")
         label.configure(image=None, width=130, height=130, text="Fehler")
 
 
+# Select output folder
+def select_output_folder():
+    folder_selected = filedialog.askdirectory()
+    output_entry.delete(0, tk.END)
+    output_entry.insert(0, folder_selected)
+
 def set_normal_map_type(type):
     global normal_map_type
     normal_map_type = type
     print(f"Normal map type set to: {type}")
-
-    # Update button styles
     if type == "directx":
         directx_button.configure(relief=tk.SUNKEN, bg="lightblue")
         opengl_button.configure(relief=tk.RAISED, bg="SystemButtonFace")
@@ -370,6 +359,18 @@ output_button.grid(row=1, column=0, pady=5)
 
 
 
+resolution_options = ["256", "512", "1024", "2048"]
+
+
+
+
+
+
+
+
+
+
+
 # Start buttons
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10)
@@ -383,45 +384,65 @@ general_conversion_button.grid(row=1, column=0, columnspan=2, pady=10)
 result_frame = tk.Frame(root)
 result_frame.pack(pady=20)
 
+
+co_label = tk.Label(result_frame, text="_co", bg="gray")
+co_label.grid(row=0, column=0, padx=10)
 base_color_result_label = tk.Label(result_frame, text="_co Result", activebackground="red", width=18, height=9, bg="gray")
 base_color_result_label.grid(row=1, column=0, padx=10)
+co_resolution = tk.Label(result_frame)
+co_resolution.grid(row=3, column=0, padx=10)
+co_resolution_var = tk.StringVar(value="1024")
+co_resolution_menu = OptionMenu(co_resolution, co_resolution_var, *resolution_options)
+co_resolution_menu.grid(row=2, column=0, padx=5)
 
+
+nohq_label = tk.Label(result_frame, text="_nohq", bg="gray")
+nohq_label.grid(row=0, column=1, padx=10)
 normal_result_label = tk.Label(result_frame, text="_nohq Result", width=18, height=9, bg="gray")
 normal_result_label.grid(row=1, column=1, padx=10)
+nohq_resolution = tk.Label(result_frame)
+nohq_resolution.grid(row=3, column=1, padx=10)
+nohq_resolution_var = tk.StringVar(value="1024")
+nohq_resolution_menu = OptionMenu(nohq_resolution, nohq_resolution_var, *resolution_options)
+nohq_resolution_menu.grid(row=2, column=0, padx=5)
 
+
+spec_label = tk.Label(result_frame, width=5, text="Spec", bg="gray")
+spec_label.grid(row=0, column=2, padx=10)
 specular_scale = tk.Scale(result_frame, length=143, activebackground="red", from_=2.0, to=0, showvalue=1, resolution=0.05, orient=tk.VERTICAL)
 specular_scale.set(0.75)
 specular_scale.grid(row=1, column=2, padx=10)
 
+gloss_label = tk.Label(result_frame, width=5, text="Gloss", bg="gray")
+gloss_label.grid(row=0, column=3, padx=10)
 glossiness_scale = tk.Scale(result_frame, length=143, activebackground="red",  showvalue=1, from_=2.0, to=0.0, resolution=0.05, orient=tk.VERTICAL)
 glossiness_scale.set(1.0)
 glossiness_scale.grid(row=1, column=3, padx=0)
 
-smdi_result_label = tk.Label(result_frame, text="_smdi Result", width=18, height=9, bg="gray")
-smdi_result_label.grid(row=1, column=4, padx=10)
-
-
-
-as_result_label = tk.Label(result_frame, text="_as Result", width=18, height=9, bg="gray")
-as_result_label.grid(row=1, column=5, padx=10)
-
-co_label = tk.Label(result_frame, text="_co", bg="gray")
-co_label.grid(row=0, column=0, padx=10)
-
-nohq_label = tk.Label(result_frame, text="_nohq", bg="gray")
-nohq_label.grid(row=0, column=1, padx=10)
-
-spec_label = tk.Label(result_frame, width=5, text="Spec", bg="gray")
-spec_label.grid(row=0, column=2, padx=10)
-
-gloss_label = tk.Label(result_frame, width=5, text="Gloss", bg="gray")
-gloss_label.grid(row=0, column=3, padx=10)
 
 smdi_label = tk.Label(result_frame, text="_smdi", bg="gray")
 smdi_label.grid(row=0, column=4, padx=10)
+smdi_result_label = tk.Label(result_frame, text="_smdi Result", width=18, height=9, bg="gray")
+smdi_result_label.grid(row=1, column=4, padx=10)
+smdi_resolution = tk.Label(result_frame)
+smdi_resolution.grid(row=3, column=4, padx=10)
+smdi_resolution_var = tk.StringVar(value="1024")
+smdi_resolution_menu = OptionMenu(smdi_resolution, smdi_resolution_var, *resolution_options)
+smdi_resolution_menu.grid(row=2, column=0, padx=5)
+
 
 as_label = tk.Label(result_frame, text="_as", bg="gray")
 as_label.grid(row=0, column=5, padx=10)
+as_result_label = tk.Label(result_frame, text="_as Result", width=18, height=9, bg="gray")
+as_result_label.grid(row=1, column=5, padx=10)
+as_resolution = tk.Label(result_frame)
+as_resolution.grid(row=3, column=5, padx=10)
+as_resolution_var = tk.StringVar(value="1024")
+as_resolution_menu = OptionMenu(as_resolution, as_resolution_var, *resolution_options)
+as_resolution_menu.grid(row=2, column=0, padx=5)
+
+
+
 
 
 
