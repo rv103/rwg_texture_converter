@@ -270,7 +270,7 @@ def set_normal_map_type(type):
 
 # Create the GUI
 root  = tk.Tk()
-root .title("Texture Converter 0.87b")
+root .title("Texture Converter 0.88b")
 root .geometry("750x800")
 
 
